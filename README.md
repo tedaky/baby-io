@@ -15,6 +15,16 @@ npm start
 
 The app is served at `http://localhost:4200/` by default.
 
+## Dev container
+
+Open the repository in VS Code and choose **Reopen in Container** when prompted. The container uses Node 22, installs the project dependencies automatically, and forwards port 4200 for the Angular development server.
+
+Start the app inside the container with:
+
+```bash
+npm start -- --host 0.0.0.0
+```
+
 ## Firebase Hosting
 
 The Firebase CLI is installed locally in the project. Authenticate once in an interactive terminal:
