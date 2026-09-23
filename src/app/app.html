@@ -12,7 +12,10 @@
   </header>
 
   @if (auth.isLoading()) {
-    <section class="empty-state"><h3>Connecting your log</h3><p>Checking your sign-in status.</p></section>
+    <section class="empty-state">
+      <h3>Connecting your log</h3>
+      <p>Checking your sign-in status.</p>
+    </section>
   } @else if (!auth.user()) {
     <section class="empty-state">
       <div class="empty-icon" aria-hidden="true">✦</div>
@@ -21,156 +24,298 @@
       @if (auth.error(); as error) {
         <p class="auth-error" role="alert">{{ error }}</p>
       }
-      <button mat-flat-button color="primary" type="button" (click)="auth.signIn()">Sign in with Google</button>
+      <button mat-flat-button color="primary" type="button" (click)="auth.signIn()">
+        Sign in with Google
+      </button>
     </section>
   } @else {
+    <section class="date-panel" aria-labelledby="date-heading">
+      <div class="date-copy">
+        <p class="eyebrow">SELECTED DAY</p>
+        <h2 id="date-heading">{{ selectedDateLabel }}</h2>
+        <p class="date-subtitle">{{ selectedDate() | date: 'MMMM d, y' }}</p>
+      </div>
+      <div class="date-controls">
+        <button
+          mat-icon-button
+          type="button"
+          (click)="selectRelativeDate(-1)"
+          aria-label="Previous day"
+        >
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        <mat-form-field appearance="outline" class="date-field">
+          <mat-label>Choose a date</mat-label>
+          <input
+            matInput
+            [matDatepicker]="picker"
+            [ngModel]="selectedDate()"
+            (ngModelChange)="selectDate($event)"
+            aria-label="Choose a date"
+          />
+          <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+          <mat-datepicker #picker></mat-datepicker>
+        </mat-form-field>
+        <button mat-icon-button type="button" (click)="selectRelativeDate(1)" aria-label="Next day">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+      </div>
+    </section>
 
-  <section class="date-panel" aria-labelledby="date-heading">
-    <div class="date-copy">
-      <p class="eyebrow">SELECTED DAY</p>
-      <h2 id="date-heading">{{ selectedDateLabel }}</h2>
-      <p class="date-subtitle">{{ selectedDate() | date: 'MMMM d, y' }}</p>
-    </div>
-    <mat-form-field appearance="outline" class="date-field">
-      <mat-label>Choose a date</mat-label>
-      <input matInput [matDatepicker]="picker" [ngModel]="selectedDate()" (ngModelChange)="selectDate($event)" aria-label="Choose a date" />
-      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-      <mat-datepicker #picker></mat-datepicker>
-    </mat-form-field>
-  </section>
+    <section class="summary-panel" aria-label="Baby summary">
+      <div class="summary-item">
+        <span class="summary-label">Latest weight</span>
+        @if (selectedDayWeight; as weight) {
+          <strong>{{ weight.weight }} g</strong>
+          <span class="summary-detail">{{ weight.date | date: 'MMM d' }} at {{ weight.time }}</span>
+          @if (weightChange !== undefined) {
+            <span
+              class="weight-change"
+              [class.weight-loss]="weightChange < 0"
+              [class.weight-gain-light]="weightChange > 0 && weightChange < 30"
+              [class.weight-gain]="weightChange >= 30"
+            >
+              @if (weightChange < 0) {
+                Down {{ -weightChange }} g from {{ weightComparisonDateLabel }}
+              } @else if (weightChange > 0) {
+                Up {{ weightChange }} g from {{ weightComparisonDateLabel }}
+              } @else {
+                No change from {{ weightComparisonDateLabel }}
+              }
+            </span>
+          }
+        } @else {
+          <strong class="summary-empty">Not recorded</strong>
+        }
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Today’s milk + supplement</span>
+        <strong>{{ dailyVolumeTotal }} mL</strong>
+        <span class="summary-detail"
+          >{{ dailyMilkTotal }} milk · {{ dailySupplementTotal }} supplement</span
+        >
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Daily feeding goal</span>
+        @if (feedingGoal !== undefined) {
+          <strong>{{ feedingGoal }} mL</strong>
+          <span class="summary-detail">Suggested session: {{ suggestedFeedingSession }} mL</span>
+        } @else {
+          <strong class="summary-empty">Add a weight</strong>
+        }
+      </div>
+    </section>
 
-  <section class="summary-panel" aria-label="Baby summary">
-    <div class="summary-item">
-      <span class="summary-label">Latest weight</span>
-      @if (latestWeight; as weight) {
-        <strong>{{ weight.weight }} g</strong>
-        <span class="summary-detail">{{ weight.date | date: 'MMM d' }} at {{ weight.time }}</span>
-      } @else {
-        <strong class="summary-empty">Not recorded</strong>
-      }
-    </div>
-    <div class="summary-item">
-      <span class="summary-label">Today’s milk + supplement</span>
-      <strong>{{ dailyVolumeTotal }} mL</strong>
-      <span class="summary-detail">{{ dailyMilkTotal }} milk · {{ dailySupplementTotal }} supplement</span>
-    </div>
-  </section>
+    <nav class="tabs" aria-label="Log sections" role="tablist">
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'feeding'"
+        [class.active]="activeTab() === 'feeding'"
+        (click)="selectTab('feeding')"
+      >
+        Feeding
+      </button>
+      <button
+        type="button"
+        role="tab"
+        [attr.aria-selected]="activeTab() === 'weight'"
+        [class.active]="activeTab() === 'weight'"
+        (click)="selectTab('weight')"
+      >
+        Weight
+      </button>
+    </nav>
 
-  <nav class="tabs" aria-label="Log sections" role="tablist">
-    <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'feeding'" [class.active]="activeTab() === 'feeding'" (click)="selectTab('feeding')">
-      Feeding
-    </button>
-    <button type="button" role="tab" [attr.aria-selected]="activeTab() === 'weight'" [class.active]="activeTab() === 'weight'" (click)="selectTab('weight')">
-      Weight
-    </button>
-  </nav>
+    @if (isFormOpen()) {
+      <section id="entry-panel" class="entry-panel" aria-labelledby="entry-heading">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">
+              {{ editingId() ? 'CORRECT RECORD' : 'NEW ' + activeTab().toUpperCase() + ' RECORD' }}
+            </p>
+            <h2 id="entry-heading" tabindex="-1">
+              {{ editingId() ? 'Edit record' : 'Add ' + activeTab() + ' record' }}
+            </h2>
+          </div>
+          <button mat-icon-button type="button" (click)="cancelForm()" aria-label="Close form">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        @if (activeTab() === 'weight') {
+          <div class="entry-grid weight-entry-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Time</mat-label>
+              <input matInput type="time" [(ngModel)]="weightDraft.time" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Weight (g)</mat-label>
+              <input
+                matInput
+                type="number"
+                min="0"
+                inputmode="decimal"
+                [(ngModel)]="weightDraft.weight"
+              />
+            </mat-form-field>
+          </div>
+        } @else {
+          <div class="entry-grid">
+            <mat-form-field appearance="outline">
+              <mat-label>Time</mat-label>
+              <input matInput type="time" [(ngModel)]="draft.time" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Milk (mL)</mat-label>
+              <input matInput type="number" min="0" inputmode="decimal" [(ngModel)]="draft.milk" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Supplement (mL)</mat-label>
+              <input
+                matInput
+                type="number"
+                min="0"
+                inputmode="decimal"
+                [(ngModel)]="draft.supplement"
+              />
+            </mat-form-field>
+          </div>
+          <div class="check-row">
+            <mat-checkbox [(ngModel)]="draft.pee">Pee</mat-checkbox>
+            <mat-checkbox [(ngModel)]="draft.poop">Poop</mat-checkbox>
+          </div>
+        }
+        <div class="form-actions">
+          <button mat-button type="button" (click)="cancelForm()">Cancel</button>
+          <button mat-flat-button color="primary" type="button" (click)="saveRecord()">
+            {{ editingId() ? 'Save changes' : 'Add ' + activeTab() + ' record' }}
+          </button>
+        </div>
+      </section>
+    } @else {
+      <button
+        mat-flat-button
+        color="primary"
+        class="add-button"
+        type="button"
+        (click)="openNewRecord()"
+      >
+        <mat-icon>add</mat-icon> Add {{ activeTab() }} record
+      </button>
+    }
 
-  @if (isFormOpen()) {
-    <section id="entry-panel" class="entry-panel" aria-labelledby="entry-heading">
+    <section class="timeline" aria-labelledby="timeline-heading">
       <div class="section-heading">
         <div>
-          <p class="eyebrow">{{ editingId() ? 'CORRECT RECORD' : 'NEW ' + activeTab().toUpperCase() + ' RECORD' }}</p>
-          <h2 id="entry-heading" tabindex="-1">{{ editingId() ? 'Edit record' : 'Add ' + activeTab() + ' record' }}</h2>
+          <p class="eyebrow">
+            {{
+              activeTab() === 'feeding' ? visibleFeedingRecords.length : visibleWeightRecords.length
+            }}
+            {{
+              (activeTab() === 'feeding'
+                ? visibleFeedingRecords.length
+                : visibleWeightRecords.length) === 1
+                ? 'EVENT'
+                : 'EVENTS'
+            }}
+          </p>
+          <h2 id="timeline-heading">{{ selectedDateLabel }} {{ activeTab() }} timeline</h2>
         </div>
-        <button mat-icon-button type="button" (click)="cancelForm()" aria-label="Close form"><mat-icon>close</mat-icon></button>
       </div>
-      @if (activeTab() === 'weight') {
-        <div class="entry-grid weight-entry-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Time</mat-label>
-            <input matInput type="time" [(ngModel)]="weightDraft.time" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Weight (g)</mat-label>
-            <input matInput type="number" min="0" inputmode="decimal" [(ngModel)]="weightDraft.weight" />
-          </mat-form-field>
+
+      @if (activeTab() === 'feeding' && visibleFeedingRecords.length) {
+        <div class="record-list">
+          @for (record of visibleFeedingRecords; track trackById($index, record)) {
+            <mat-card class="record-card">
+              <div class="record-time">{{ record.time }}</div>
+              <div class="record-details">
+                <div class="amounts">
+                  @if (record.milk) {
+                    <span
+                      ><strong>{{ record.milk }}</strong> mL milk</span
+                    >
+                  }
+                  @if (record.supplement) {
+                    <span
+                      ><strong>{{ record.supplement }}</strong> mL supplement</span
+                    >
+                  }
+                  @if (!record.milk && !record.supplement) {
+                    <span class="quiet">Care event</span>
+                  }
+                </div>
+                <div class="badges">
+                  @if (record.pee) {
+                    <span class="badge pee">Pee</span>
+                  }
+                  @if (record.poop) {
+                    <span class="badge poop">Poop</span>
+                  }
+                </div>
+              </div>
+              <div class="record-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="editRecord(record)"
+                  aria-label="Edit feeding record"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="deleteRecord(record.id)"
+                  aria-label="Delete record"
+                >
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </mat-card>
+          }
+        </div>
+      } @else if (activeTab() === 'weight' && visibleWeightRecords.length) {
+        <div class="record-list">
+          @for (record of visibleWeightRecords; track trackById($index, record)) {
+            <mat-card class="record-card weight-card">
+              <div class="record-time">{{ record.time }}</div>
+              <div class="record-details">
+                <div class="amounts">
+                  <strong>{{ record.weight }}</strong> g
+                </div>
+                <div class="quiet">Baby weight</div>
+              </div>
+              <div class="record-actions">
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="editWeight(record)"
+                  aria-label="Edit weight record"
+                >
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="deleteRecord(record.id)"
+                  aria-label="Delete weight record"
+                >
+                  <mat-icon>delete_outline</mat-icon>
+                </button>
+              </div>
+            </mat-card>
+          }
         </div>
       } @else {
-        <div class="entry-grid">
-          <mat-form-field appearance="outline">
-            <mat-label>Time</mat-label>
-            <input matInput type="time" [(ngModel)]="draft.time" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Milk (mL)</mat-label>
-            <input matInput type="number" min="0" inputmode="decimal" [(ngModel)]="draft.milk" />
-          </mat-form-field>
-          <mat-form-field appearance="outline">
-            <mat-label>Supplement (mL)</mat-label>
-            <input matInput type="number" min="0" inputmode="decimal" [(ngModel)]="draft.supplement" />
-          </mat-form-field>
-        </div>
-        <div class="check-row">
-          <mat-checkbox [(ngModel)]="draft.pee">Pee</mat-checkbox>
-          <mat-checkbox [(ngModel)]="draft.poop">Poop</mat-checkbox>
+        <div class="empty-state">
+          <div class="empty-icon" aria-hidden="true">＋</div>
+          <h3>No {{ activeTab() }} records yet</h3>
+          <p>No {{ activeTab() }} records are saved for {{ selectedDateLabel.toLowerCase() }}.</p>
+          <button mat-stroked-button type="button" (click)="openNewRecord()">
+            Add the first {{ activeTab() }} record
+          </button>
         </div>
       }
-      <div class="form-actions">
-        <button mat-button type="button" (click)="cancelForm()">Cancel</button>
-        <button mat-flat-button color="primary" type="button" (click)="saveRecord()">{{ editingId() ? 'Save changes' : 'Add ' + activeTab() + ' record' }}</button>
-      </div>
     </section>
-  } @else {
-    <button mat-flat-button color="primary" class="add-button" type="button" (click)="openNewRecord()">
-      <mat-icon>add</mat-icon> Add {{ activeTab() }} record
-    </button>
-  }
-
-  <section class="timeline" aria-labelledby="timeline-heading">
-    <div class="section-heading">
-      <div>
-        <p class="eyebrow">{{ activeTab() === 'feeding' ? visibleFeedingRecords.length : visibleWeightRecords.length }} {{ (activeTab() === 'feeding' ? visibleFeedingRecords.length : visibleWeightRecords.length) === 1 ? 'EVENT' : 'EVENTS' }}</p>
-        <h2 id="timeline-heading">{{ selectedDateLabel }} {{ activeTab() }} timeline</h2>
-      </div>
-    </div>
-
-    @if (activeTab() === 'feeding' && visibleFeedingRecords.length) {
-      <div class="record-list">
-        @for (record of visibleFeedingRecords; track trackById($index, record)) {
-          <mat-card class="record-card">
-            <div class="record-time">{{ record.time }}</div>
-            <div class="record-details">
-              <div class="amounts">
-                @if (record.milk) { <span><strong>{{ record.milk }}</strong> mL milk</span> }
-                @if (record.supplement) { <span><strong>{{ record.supplement }}</strong> mL supplement</span> }
-                @if (!record.milk && !record.supplement) { <span class="quiet">Care event</span> }
-              </div>
-              <div class="badges">
-                @if (record.pee) { <span class="badge pee">Pee</span> }
-                @if (record.poop) { <span class="badge poop">Poop</span> }
-              </div>
-            </div>
-            <div class="record-actions">
-              <button mat-icon-button type="button" (click)="editRecord(record)" aria-label="Edit feeding record"><mat-icon>edit</mat-icon></button>
-              <button mat-icon-button type="button" (click)="deleteRecord(record.id)" aria-label="Delete record"><mat-icon>delete_outline</mat-icon></button>
-            </div>
-          </mat-card>
-        }
-      </div>
-    } @else if (activeTab() === 'weight' && visibleWeightRecords.length) {
-      <div class="record-list">
-        @for (record of visibleWeightRecords; track trackById($index, record)) {
-          <mat-card class="record-card weight-card">
-            <div class="record-time">{{ record.time }}</div>
-            <div class="record-details">
-              <div class="amounts"><strong>{{ record.weight }}</strong> g</div>
-              <div class="quiet">Baby weight</div>
-            </div>
-            <div class="record-actions">
-              <button mat-icon-button type="button" (click)="editWeight(record)" aria-label="Edit weight record"><mat-icon>edit</mat-icon></button>
-              <button mat-icon-button type="button" (click)="deleteRecord(record.id)" aria-label="Delete weight record"><mat-icon>delete_outline</mat-icon></button>
-            </div>
-          </mat-card>
-        }
-      </div>
-    } @else {
-      <div class="empty-state">
-        <div class="empty-icon" aria-hidden="true">＋</div>
-        <h3>No {{ activeTab() }} records yet</h3>
-        <p>No {{ activeTab() }} records are saved for {{ selectedDateLabel.toLowerCase() }}.</p>
-        <button mat-stroked-button type="button" (click)="openNewRecord()">Add the first {{ activeTab() }} record</button>
-      </div>
-    }
-  </section>
   }
 </main>

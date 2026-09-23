@@ -30,7 +30,18 @@ type Tab = 'feeding' | 'weight';
 type EditingType = Tab | null;
 
 @Component({
-  imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, MatCheckboxModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSnackBarModule],
+  imports: [
+    DatePipe,
+    FormsModule,
+    MatButtonModule,
+    MatCardModule,
+    MatCheckboxModule,
+    MatDatepickerModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatInputModule,
+    MatSnackBarModule,
+  ],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',
@@ -44,26 +55,68 @@ export class App {
   protected readonly records = signal<Record[]>([]);
   protected draft: Draft = this.emptyDraft();
   protected weightDraft: WeightDraft = this.emptyWeightDraft();
+  private recordsLoadVersion = 0;
 
-  constructor(protected readonly auth: AuthService, private readonly logStorage: LogStorageService, private readonly snackBar: MatSnackBar) {
+  constructor(
+    protected readonly auth: AuthService,
+    private readonly logStorage: LogStorageService,
+    private readonly snackBar: MatSnackBar,
+  ) {
     effect(() => {
       const user = this.auth.user();
-      if (user) void this.loadRecords();
+      const selectedDate = this.selectedDate();
+      const loadVersion = ++this.recordsLoadVersion;
+      if (user) void this.loadRecords(selectedDate, loadVersion);
       else this.records.set([]);
     });
   }
 
-  protected get selectedDateKey(): string { return this.dateKey(this.selectedDate()); }
+  protected get selectedDateKey(): string {
+    return this.dateKey(this.selectedDate());
+  }
   protected get visibleFeedingRecords(): FeedingRecord[] {
-    return this.records().filter((record): record is FeedingRecord => record.type !== 'weight' && record.date === this.selectedDateKey).sort((a, b) => b.time.localeCompare(a.time));
+    return this.records()
+      .filter(
+        (record): record is FeedingRecord =>
+          record.type !== 'weight' && record.date === this.selectedDateKey,
+      )
+      .sort((a, b) => b.time.localeCompare(a.time));
   }
   protected get visibleWeightRecords(): WeightRecord[] {
-    return this.records().filter((record): record is WeightRecord => record.type === 'weight' && record.date === this.selectedDateKey).sort((a, b) => b.time.localeCompare(a.time));
+    return this.records()
+      .filter(
+        (record): record is WeightRecord =>
+          record.type === 'weight' && record.date === this.selectedDateKey,
+      )
+      .sort((a, b) => b.time.localeCompare(a.time));
   }
   protected get latestWeight(): WeightRecord | undefined {
     return this.records()
       .filter((record): record is WeightRecord => record.type === 'weight')
       .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))[0];
+  }
+  protected get selectedDayWeight(): WeightRecord | undefined {
+    return this.latestWeightForDate(this.selectedDateKey);
+  }
+  protected get previousDayWeight(): WeightRecord | undefined {
+    const previousDay = new Date(this.selectedDate());
+    previousDay.setDate(previousDay.getDate() - 1);
+    return this.latestWeightForDate(this.dateKey(previousDay));
+  }
+  protected get weightChange(): number | undefined {
+    const currentWeight = this.selectedDayWeight;
+    const previousWeight = this.previousDayWeight;
+    return currentWeight && previousWeight
+      ? currentWeight.weight - previousWeight.weight
+      : undefined;
+  }
+  protected get weightComparisonDateLabel(): string | undefined {
+    const previousWeight = this.previousDayWeight;
+    if (!previousWeight) return undefined;
+    if (this.selectedDateKey === this.dateKey(new Date())) return 'yesterday';
+    return new Intl.DateTimeFormat('en', { month: 'short', day: 'numeric' }).format(
+      new Date(`${previousWeight.date}T00:00:00`),
+    );
   }
   protected get dailyMilkTotal(): number {
     return this.visibleFeedingRecords.reduce((total, record) => total + record.milk, 0);
@@ -74,9 +127,18 @@ export class App {
   protected get dailyVolumeTotal(): number {
     return this.dailyMilkTotal + this.dailySupplementTotal;
   }
+  protected get feedingGoal(): number | undefined {
+    const weight = this.latestWeight;
+    return weight ? Math.round((weight.weight / 1000) * 150) : undefined;
+  }
+  protected get suggestedFeedingSession(): number | undefined {
+    return this.feedingGoal === undefined ? undefined : Math.round(this.feedingGoal / 8);
+  }
   protected get selectedDateLabel(): string {
     if (this.selectedDateKey === this.dateKey(new Date())) return 'Today';
-    return new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(this.selectedDate());
+    return new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(
+      this.selectedDate(),
+    );
   }
 
   protected selectTab(tab: Tab): void {
@@ -94,7 +156,13 @@ export class App {
   protected editRecord(record: FeedingRecord): void {
     this.editingId.set(record.id);
     this.editingType.set('feeding');
-    this.draft = { time: record.time, milk: record.milk || null, supplement: record.supplement || null, pee: record.pee, poop: record.poop };
+    this.draft = {
+      time: record.time,
+      milk: record.milk || null,
+      supplement: record.supplement || null,
+      pee: record.pee,
+      poop: record.poop,
+    };
     this.isFormOpen.set(true);
     this.scrollToEntryForm();
   }
@@ -119,7 +187,9 @@ export class App {
     } else {
       const record = { id: currentId, ...this.draftRecord() };
       await this.logStorage.update(record);
-      this.records.update((records) => records.map((existing) => existing.id === currentId ? record : existing));
+      this.records.update((records) =>
+        records.map((existing) => (existing.id === currentId ? record : existing)),
+      );
     }
     this.cancelForm();
   }
@@ -129,18 +199,44 @@ export class App {
     if (!deletedRecord) return;
     await this.logStorage.delete(id);
     this.records.update((records) => records.filter((record) => record.id !== id));
-    this.snackBar.open('Record deleted', 'Undo', { duration: 30000 })
+    this.snackBar
+      .open('Record deleted', 'Undo', { duration: 30000 })
       .onAction()
       .subscribe(() => void this.restoreRecord(deletedRecord));
   }
-  protected cancelForm(): void { this.isFormOpen.set(false); this.editingId.set(null); this.editingType.set(null); }
-  protected selectDate(date: Date | null): void { if (date) this.selectedDate.set(this.startOfDay(date)); }
-  protected trackById(_: number, record: Record): string { return record.id; }
+  protected cancelForm(): void {
+    this.isFormOpen.set(false);
+    this.editingId.set(null);
+    this.editingType.set(null);
+  }
+  protected selectDate(date: Date | null): void {
+    if (date) this.selectedDate.set(this.startOfDay(date));
+  }
+  protected selectRelativeDate(days: number): void {
+    const date = new Date(this.selectedDate());
+    date.setDate(date.getDate() + days);
+    this.selectedDate.set(this.startOfDay(date));
+  }
+  protected trackById(_: number, record: Record): string {
+    return record.id;
+  }
 
   private emptyDraft(): Draft {
-    return { time: new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()), milk: null, supplement: null, pee: false, poop: false };
+    return {
+      time: new Intl.DateTimeFormat('en', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).format(new Date()),
+      milk: null,
+      supplement: null,
+      pee: false,
+      poop: false,
+    };
   }
-  private emptyWeightDraft(): WeightDraft { return { time: this.emptyDraft().time, weight: null }; }
+  private emptyWeightDraft(): WeightDraft {
+    return { time: this.emptyDraft().time, weight: null };
+  }
   private scrollToEntryForm(): void {
     setTimeout(() => {
       const entryPanel = document.getElementById('entry-panel');
@@ -149,10 +245,26 @@ export class App {
       entryHeading?.focus({ preventScroll: true });
     });
   }
-  private async loadRecords(): Promise<void> { this.records.set(await this.logStorage.getAll()); }
+  private async loadRecords(selectedDate: Date, loadVersion: number): Promise<void> {
+    const previousDate = new Date(selectedDate);
+    previousDate.setDate(previousDate.getDate() - 1);
+    const dates = [this.dateKey(selectedDate), this.dateKey(previousDate)];
+    const [rangeRecords, latestWeight] = await Promise.all([
+      this.logStorage.getRecordsForDates(dates),
+      this.logStorage.getLatestWeight(),
+    ]);
+    if (loadVersion !== this.recordsLoadVersion) return;
+    const records = [...rangeRecords];
+    if (latestWeight && !records.some((record) => record.id === latestWeight.id)) {
+      records.push(latestWeight);
+    }
+    this.records.set(records);
+  }
   private async restoreRecord(record: Record): Promise<void> {
     await this.logStorage.update(record);
-    this.records.update((records) => records.some((existing) => existing.id === record.id) ? records : [...records, record]);
+    this.records.update((records) =>
+      records.some((existing) => existing.id === record.id) ? records : [...records, record],
+    );
   }
   private async saveWeight(): Promise<void> {
     const currentId = this.editingId();
@@ -162,16 +274,44 @@ export class App {
     } else {
       const record = { id: currentId, ...this.weightRecord() };
       await this.logStorage.update(record);
-      this.records.update((records) => records.map((existing) => existing.id === currentId ? record : existing));
+      this.records.update((records) =>
+        records.map((existing) => (existing.id === currentId ? record : existing)),
+      );
     }
     this.cancelForm();
   }
   private draftRecord(): Omit<FeedingRecord, 'id'> {
-    return { type: 'feeding', date: this.selectedDateKey, time: this.draft.time, milk: this.draft.milk ?? 0, supplement: this.draft.supplement ?? 0, pee: this.draft.pee, poop: this.draft.poop };
+    return {
+      type: 'feeding',
+      date: this.selectedDateKey,
+      time: this.draft.time,
+      milk: this.draft.milk ?? 0,
+      supplement: this.draft.supplement ?? 0,
+      pee: this.draft.pee,
+      poop: this.draft.poop,
+    };
   }
   private weightRecord(): Omit<WeightRecord, 'id'> {
-    return { type: 'weight', date: this.selectedDateKey, time: this.weightDraft.time, weight: this.weightDraft.weight ?? 0 };
+    return {
+      type: 'weight',
+      date: this.selectedDateKey,
+      time: this.weightDraft.time,
+      weight: this.weightDraft.weight ?? 0,
+    };
   }
-  private startOfDay(date: Date): Date { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
-  private dateKey(date: Date): string { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-'); }
+  private latestWeightForDate(date: string): WeightRecord | undefined {
+    return this.records()
+      .filter((record): record is WeightRecord => record.type === 'weight' && record.date === date)
+      .sort((a, b) => b.time.localeCompare(a.time))[0];
+  }
+  private startOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+  private dateKey(date: Date): string {
+    return [
+      date.getFullYear(),
+      String(date.getMonth() + 1).padStart(2, '0'),
+      String(date.getDate()).padStart(2, '0'),
+    ].join('-');
+  }
 }

@@ -1,5 +1,16 @@
 import { Injectable } from '@angular/core';
-import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  deleteDoc,
+  doc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  setDoc,
+  where,
+} from 'firebase/firestore';
 import { firestore } from './firebase';
 import { FeedingRecord, Record, WeightRecord } from './record.model';
 
@@ -7,9 +18,23 @@ import { FeedingRecord, Record, WeightRecord } from './record.model';
 export class LogStorageService {
   private readonly logs = collection(firestore, 'logs');
 
-  async getAll(): Promise<Record[]> {
-    const snapshot = await getDocs(query(this.logs, orderBy('date'), orderBy('time')));
+  async getRecordsForDates(dates: string[]): Promise<Record[]> {
+    const snapshot = await getDocs(query(this.logs, where('date', 'in', dates)));
     return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as Record);
+  }
+
+  async getLatestWeight(): Promise<WeightRecord | undefined> {
+    const snapshot = await getDocs(
+      query(
+        this.logs,
+        where('type', '==', 'weight'),
+        orderBy('date', 'desc'),
+        orderBy('time', 'desc'),
+        limit(1),
+      ),
+    );
+    const entry = snapshot.docs[0];
+    return entry ? ({ id: entry.id, ...entry.data() } as WeightRecord) : undefined;
   }
 
   async add(record: Omit<FeedingRecord, 'id'>): Promise<FeedingRecord>;
