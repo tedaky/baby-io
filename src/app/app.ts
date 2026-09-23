@@ -131,6 +131,11 @@ export class App {
     const weight = this.selectedDayWeight;
     return weight ? Math.round((weight.weight / 1000) * 150) : undefined;
   }
+  protected get remainingFeedingAmount(): number | undefined {
+    return this.feedingGoal === undefined
+      ? undefined
+      : Math.max(this.feedingGoal - this.dailyVolumeTotal, 0);
+  }
   protected get suggestedFeedingSession(): number | undefined {
     return this.feedingGoal === undefined ? undefined : Math.round(this.feedingGoal / 8);
   }

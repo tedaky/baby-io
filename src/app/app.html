@@ -100,6 +100,7 @@
         @if (feedingGoal !== undefined) {
           <strong>{{ feedingGoal }} mL</strong>
           <span class="summary-detail">Suggested session: {{ suggestedFeedingSession }} mL</span>
+          <span class="summary-detail">{{ remainingFeedingAmount }} mL remaining</span>
         } @else {
           <strong class="summary-empty">Add a weight</strong>
         }

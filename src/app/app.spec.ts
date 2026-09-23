@@ -50,11 +50,22 @@ describe('App', () => {
     app.selectedDate.set(new Date(2025, 0, 2));
     app.records.set([
       { id: 'selected-day', type: 'weight', date: '2025-01-02', time: '08:00', weight: 2000 },
+      {
+        id: 'feeding',
+        type: 'feeding',
+        date: '2025-01-02',
+        time: '12:00',
+        milk: 100,
+        supplement: 50,
+        pee: false,
+        poop: false,
+      },
       { id: 'latest', type: 'weight', date: '2025-01-03', time: '08:00', weight: 3000 },
     ]);
     fixture.detectChanges();
 
     const summaryItems = fixture.nativeElement.querySelectorAll('.summary-item');
     expect(summaryItems[2].querySelector('strong')?.textContent).toContain('300 mL');
+    expect(summaryItems[2].textContent).toContain('150 mL remaining');
   });
 });
