@@ -9,7 +9,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { Record } from './record.model';
+import { FeedingRecord, Record, WeightRecord } from './record.model';
 import { AuthService } from './auth.service';
 import { LogStorageService } from './log-storage.service';
 
@@ -21,6 +21,14 @@ interface Draft {
   poop: boolean;
 }
 
+interface WeightDraft {
+  time: string;
+  weight: number | null;
+}
+
+type Tab = 'feeding' | 'weight';
+type EditingType = Tab | null;
+
 @Component({
   imports: [DatePipe, FormsModule, MatButtonModule, MatCardModule, MatCheckboxModule, MatDatepickerModule, MatFormFieldModule, MatIconModule, MatInputModule, MatSnackBarModule],
   selector: 'app-root',
@@ -29,10 +37,13 @@ interface Draft {
 })
 export class App {
   protected readonly selectedDate = signal(this.startOfDay(new Date()));
+  protected readonly activeTab = signal<Tab>('feeding');
   protected readonly isFormOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
+  protected readonly editingType = signal<EditingType>(null);
   protected readonly records = signal<Record[]>([]);
   protected draft: Draft = this.emptyDraft();
+  protected weightDraft: WeightDraft = this.emptyWeightDraft();
 
   constructor(protected readonly auth: AuthService, private readonly logStorage: LogStorageService, private readonly snackBar: MatSnackBar) {
     effect(() => {
@@ -43,21 +54,63 @@ export class App {
   }
 
   protected get selectedDateKey(): string { return this.dateKey(this.selectedDate()); }
-  protected get visibleRecords(): Record[] {
-    return this.records().filter((record) => record.date === this.selectedDateKey).sort((a, b) => b.time.localeCompare(a.time));
+  protected get visibleFeedingRecords(): FeedingRecord[] {
+    return this.records().filter((record): record is FeedingRecord => record.type !== 'weight' && record.date === this.selectedDateKey).sort((a, b) => b.time.localeCompare(a.time));
+  }
+  protected get visibleWeightRecords(): WeightRecord[] {
+    return this.records().filter((record): record is WeightRecord => record.type === 'weight' && record.date === this.selectedDateKey).sort((a, b) => b.time.localeCompare(a.time));
+  }
+  protected get latestWeight(): WeightRecord | undefined {
+    return this.records()
+      .filter((record): record is WeightRecord => record.type === 'weight')
+      .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))[0];
+  }
+  protected get dailyMilkTotal(): number {
+    return this.visibleFeedingRecords.reduce((total, record) => total + record.milk, 0);
+  }
+  protected get dailySupplementTotal(): number {
+    return this.visibleFeedingRecords.reduce((total, record) => total + record.supplement, 0);
+  }
+  protected get dailyVolumeTotal(): number {
+    return this.dailyMilkTotal + this.dailySupplementTotal;
   }
   protected get selectedDateLabel(): string {
     if (this.selectedDateKey === this.dateKey(new Date())) return 'Today';
     return new Intl.DateTimeFormat('en', { weekday: 'long', month: 'long', day: 'numeric' }).format(this.selectedDate());
   }
 
-  protected openNewRecord(): void { this.editingId.set(null); this.draft = this.emptyDraft(); this.isFormOpen.set(true); }
-  protected editRecord(record: Record): void {
+  protected selectTab(tab: Tab): void {
+    this.activeTab.set(tab);
+    this.cancelForm();
+  }
+  protected openNewRecord(): void {
+    this.editingId.set(null);
+    this.editingType.set(null);
+    this.draft = this.emptyDraft();
+    this.weightDraft = this.emptyWeightDraft();
+    this.isFormOpen.set(true);
+    this.scrollToEntryForm();
+  }
+  protected editRecord(record: FeedingRecord): void {
     this.editingId.set(record.id);
+    this.editingType.set('feeding');
     this.draft = { time: record.time, milk: record.milk || null, supplement: record.supplement || null, pee: record.pee, poop: record.poop };
     this.isFormOpen.set(true);
+    this.scrollToEntryForm();
+  }
+  protected editWeight(record: WeightRecord): void {
+    this.editingId.set(record.id);
+    this.editingType.set('weight');
+    this.weightDraft = { time: record.time, weight: record.weight };
+    this.isFormOpen.set(true);
+    this.scrollToEntryForm();
   }
   protected async saveRecord(): Promise<void> {
+    if (this.activeTab() === 'weight') {
+      if (!this.weightDraft.weight || this.weightDraft.weight <= 0) return;
+      await this.saveWeight();
+      return;
+    }
     if (!this.draft.milk && !this.draft.supplement && !this.draft.pee && !this.draft.poop) return;
     const currentId = this.editingId();
     if (currentId === null) {
@@ -80,20 +133,44 @@ export class App {
       .onAction()
       .subscribe(() => void this.restoreRecord(deletedRecord));
   }
-  protected cancelForm(): void { this.isFormOpen.set(false); this.editingId.set(null); }
+  protected cancelForm(): void { this.isFormOpen.set(false); this.editingId.set(null); this.editingType.set(null); }
   protected selectDate(date: Date | null): void { if (date) this.selectedDate.set(this.startOfDay(date)); }
   protected trackById(_: number, record: Record): string { return record.id; }
 
   private emptyDraft(): Draft {
     return { time: new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date()), milk: null, supplement: null, pee: false, poop: false };
   }
+  private emptyWeightDraft(): WeightDraft { return { time: this.emptyDraft().time, weight: null }; }
+  private scrollToEntryForm(): void {
+    setTimeout(() => {
+      const entryPanel = document.getElementById('entry-panel');
+      const entryHeading = document.getElementById('entry-heading');
+      entryPanel?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      entryHeading?.focus({ preventScroll: true });
+    });
+  }
   private async loadRecords(): Promise<void> { this.records.set(await this.logStorage.getAll()); }
   private async restoreRecord(record: Record): Promise<void> {
     await this.logStorage.update(record);
     this.records.update((records) => records.some((existing) => existing.id === record.id) ? records : [...records, record]);
   }
-  private draftRecord(): Omit<Record, 'id'> {
-    return { date: this.selectedDateKey, time: this.draft.time, milk: this.draft.milk ?? 0, supplement: this.draft.supplement ?? 0, pee: this.draft.pee, poop: this.draft.poop };
+  private async saveWeight(): Promise<void> {
+    const currentId = this.editingId();
+    if (currentId === null) {
+      const record = await this.logStorage.add(this.weightRecord());
+      this.records.update((records) => [...records, record]);
+    } else {
+      const record = { id: currentId, ...this.weightRecord() };
+      await this.logStorage.update(record);
+      this.records.update((records) => records.map((existing) => existing.id === currentId ? record : existing));
+    }
+    this.cancelForm();
+  }
+  private draftRecord(): Omit<FeedingRecord, 'id'> {
+    return { type: 'feeding', date: this.selectedDateKey, time: this.draft.time, milk: this.draft.milk ?? 0, supplement: this.draft.supplement ?? 0, pee: this.draft.pee, poop: this.draft.poop };
+  }
+  private weightRecord(): Omit<WeightRecord, 'id'> {
+    return { type: 'weight', date: this.selectedDateKey, time: this.weightDraft.time, weight: this.weightDraft.weight ?? 0 };
   }
   private startOfDay(date: Date): Date { return new Date(date.getFullYear(), date.getMonth(), date.getDate()); }
   private dateKey(date: Date): string { return [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-'); }

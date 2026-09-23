@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, setDoc } from 'firebase/firestore';
 import { firestore } from './firebase';
-import { Record } from './record.model';
+import { FeedingRecord, Record, WeightRecord } from './record.model';
 
 @Injectable({ providedIn: 'root' })
 export class LogStorageService {
@@ -12,9 +12,11 @@ export class LogStorageService {
     return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as Record);
   }
 
-  async add(record: Omit<Record, 'id'>): Promise<Record> {
+  async add(record: Omit<FeedingRecord, 'id'>): Promise<FeedingRecord>;
+  async add(record: Omit<WeightRecord, 'id'>): Promise<WeightRecord>;
+  async add(record: Omit<FeedingRecord, 'id'> | Omit<WeightRecord, 'id'>): Promise<Record> {
     const entry = await addDoc(this.logs, record);
-    return { id: entry.id, ...record };
+    return { id: entry.id, ...record } as Record;
   }
 
   async update(record: Record): Promise<void> {

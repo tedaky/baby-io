@@ -1,6 +1,11 @@
 {
   "name": "Baby IO",
   "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "22.22.3"
+    }
+  },
   "remoteUser": "node",
   "forwardPorts": [4200],
   "portsAttributes": {
