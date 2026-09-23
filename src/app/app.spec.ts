@@ -67,5 +67,24 @@ describe('App', () => {
     const summaryItems = fixture.nativeElement.querySelectorAll('.summary-item');
     expect(summaryItems[2].querySelector('strong')?.textContent).toContain('300 mL');
     expect(summaryItems[2].textContent).toContain('150 mL remaining');
+    expect(
+      summaryItems[2]
+        .querySelector('.feeding-goal-status')
+        ?.classList.contains('feeding-goal-not-reached'),
+    ).toBe(true);
+
+    app.records.update((records: any[]) =>
+      records.map((record) =>
+        record.id === 'feeding' ? { ...record, milk: 350, supplement: 0 } : record,
+      ),
+    );
+    fixture.detectChanges();
+
+    expect(summaryItems[2].textContent).toContain('Over goal by 50 mL');
+    expect(
+      summaryItems[2]
+        .querySelector('.feeding-goal-status')
+        ?.classList.contains('feeding-goal-reached'),
+    ).toBe(true);
   });
 });

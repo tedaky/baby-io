@@ -120,6 +120,15 @@ h3 {
   color: var(--muted);
   font-size: 0.78rem;
 }
+.feeding-goal-status {
+  font-weight: 700;
+}
+.feeding-goal-not-reached {
+  color: #b33f35;
+}
+.feeding-goal-reached {
+  color: #287446;
+}
 .weight-change {
   font-size: 0.78rem;
   font-weight: 700;

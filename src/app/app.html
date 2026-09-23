@@ -100,7 +100,14 @@
         @if (feedingGoal !== undefined) {
           <strong>{{ feedingGoal }} mL</strong>
           <span class="summary-detail">Suggested session: {{ suggestedFeedingSession }} mL</span>
-          <span class="summary-detail">{{ remainingFeedingAmount }} mL remaining</span>
+          <span
+            class="summary-detail feeding-goal-status"
+            [class.feeding-goal-reached]="
+              feedingGoalStatus === 'reached' || feedingGoalStatus === 'exceeded'
+            "
+            [class.feeding-goal-not-reached]="feedingGoalStatus === 'remaining'"
+            >{{ feedingGoalStatusLabel }}</span
+          >
         } @else {
           <strong class="summary-empty">Add a weight</strong>
         }

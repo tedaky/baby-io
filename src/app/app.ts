@@ -136,6 +136,19 @@ export class App {
       ? undefined
       : Math.max(this.feedingGoal - this.dailyVolumeTotal, 0);
   }
+  protected get feedingGoalStatus(): 'today' | 'remaining' | 'reached' | 'exceeded' {
+    if (this.selectedDateKey === this.dateKey(new Date())) return 'today';
+    const goal = this.feedingGoal;
+    if (goal === undefined || this.dailyVolumeTotal < goal) return 'remaining';
+    return this.dailyVolumeTotal === goal ? 'reached' : 'exceeded';
+  }
+  protected get feedingGoalStatusLabel(): string {
+    if (this.feedingGoalStatus === 'reached') return 'Goal reached';
+    if (this.feedingGoalStatus === 'exceeded') {
+      return `Over goal by ${this.dailyVolumeTotal - (this.feedingGoal ?? 0)} mL`;
+    }
+    return `${this.remainingFeedingAmount} mL remaining`;
+  }
   protected get suggestedFeedingSession(): number | undefined {
     return this.feedingGoal === undefined ? undefined : Math.round(this.feedingGoal / 8);
   }
