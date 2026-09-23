@@ -128,7 +128,7 @@ export class App {
     return this.dailyMilkTotal + this.dailySupplementTotal;
   }
   protected get feedingGoal(): number | undefined {
-    const weight = this.latestWeight;
+    const weight = this.selectedDayWeight;
     return weight ? Math.round((weight.weight / 1000) * 150) : undefined;
   }
   protected get suggestedFeedingSession(): number | undefined {
