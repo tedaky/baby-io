@@ -1,0 +1,121 @@
+<main class="app-shell">
+  <header class="app-header">
+    <div>
+      <p class="eyebrow">BABY IO</p>
+      <h1>Baby log</h1>
+    </div>
+    @if (auth.user(); as user) {
+      <button mat-button type="button" (click)="auth.signOut()">Sign out</button>
+    } @else {
+      <button mat-flat-button color="primary" type="button" (click)="auth.signIn()">Sign in</button>
+    }
+  </header>
+
+  @if (auth.isLoading()) {
+    <section class="empty-state"><h3>Connecting your log</h3><p>Checking your sign-in status.</p></section>
+  } @else if (!auth.user()) {
+    <section class="empty-state">
+      <div class="empty-icon" aria-hidden="true">✦</div>
+      <h3>Your private baby log</h3>
+      <p>Sign in with Google to save and view your records securely.</p>
+      @if (auth.error(); as error) {
+        <p class="auth-error" role="alert">{{ error }}</p>
+      }
+      <button mat-flat-button color="primary" type="button" (click)="auth.signIn()">Sign in with Google</button>
+    </section>
+  } @else {
+
+  <section class="date-panel" aria-labelledby="date-heading">
+    <div class="date-copy">
+      <p class="eyebrow">SELECTED DAY</p>
+      <h2 id="date-heading">{{ selectedDateLabel }}</h2>
+      <p class="date-subtitle">{{ selectedDate() | date: 'MMMM d, y' }}</p>
+    </div>
+    <mat-form-field appearance="outline" class="date-field">
+      <mat-label>Choose a date</mat-label>
+      <input matInput [matDatepicker]="picker" [ngModel]="selectedDate()" (ngModelChange)="selectDate($event)" aria-label="Choose a date" />
+      <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+      <mat-datepicker #picker></mat-datepicker>
+    </mat-form-field>
+  </section>
+
+  @if (isFormOpen()) {
+    <section class="entry-panel" aria-labelledby="entry-heading">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">{{ editingId() ? 'CORRECT RECORD' : 'NEW RECORD' }}</p>
+          <h2 id="entry-heading">{{ editingId() ? 'Edit record' : 'Add record' }}</h2>
+        </div>
+        <button mat-icon-button type="button" (click)="cancelForm()" aria-label="Close form"><mat-icon>close</mat-icon></button>
+      </div>
+      <div class="entry-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Time</mat-label>
+          <input matInput type="time" [(ngModel)]="draft.time" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Milk (mL)</mat-label>
+          <input matInput type="number" min="0" inputmode="decimal" [(ngModel)]="draft.milk" />
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Supplement (mL)</mat-label>
+          <input matInput type="number" min="0" inputmode="decimal" [(ngModel)]="draft.supplement" />
+        </mat-form-field>
+      </div>
+      <div class="check-row">
+        <mat-checkbox [(ngModel)]="draft.pee">Pee</mat-checkbox>
+        <mat-checkbox [(ngModel)]="draft.poop">Poop</mat-checkbox>
+      </div>
+      <div class="form-actions">
+        <button mat-button type="button" (click)="cancelForm()">Cancel</button>
+        <button mat-flat-button color="primary" type="button" (click)="saveRecord()">{{ editingId() ? 'Save changes' : 'Add record' }}</button>
+      </div>
+    </section>
+  } @else {
+    <button mat-flat-button color="primary" class="add-button" type="button" (click)="openNewRecord()">
+      <mat-icon>add</mat-icon> Add record
+    </button>
+  }
+
+  <section class="timeline" aria-labelledby="timeline-heading">
+    <div class="section-heading">
+      <div>
+        <p class="eyebrow">{{ visibleRecords.length }} {{ visibleRecords.length === 1 ? 'EVENT' : 'EVENTS' }}</p>
+        <h2 id="timeline-heading">{{ selectedDateLabel }} timeline</h2>
+      </div>
+    </div>
+
+    @if (visibleRecords.length) {
+      <div class="record-list">
+        @for (record of visibleRecords; track trackById($index, record)) {
+          <mat-card class="record-card">
+            <div class="record-time">{{ record.time }}</div>
+            <div class="record-details">
+              <div class="amounts">
+                @if (record.milk) { <span><strong>{{ record.milk }}</strong> mL milk</span> }
+                @if (record.supplement) { <span><strong>{{ record.supplement }}</strong> mL supplement</span> }
+                @if (!record.milk && !record.supplement) { <span class="quiet">Care event</span> }
+              </div>
+              <div class="badges">
+                @if (record.pee) { <span class="badge pee">Pee</span> }
+                @if (record.poop) { <span class="badge poop">Poop</span> }
+              </div>
+            </div>
+            <div class="record-actions">
+              <button mat-icon-button type="button" (click)="editRecord(record)" aria-label="Edit record"><mat-icon>edit</mat-icon></button>
+              <button mat-icon-button type="button" (click)="deleteRecord(record.id)" aria-label="Delete record"><mat-icon>delete_outline</mat-icon></button>
+            </div>
+          </mat-card>
+        }
+      </div>
+    } @else {
+      <div class="empty-state">
+        <div class="empty-icon" aria-hidden="true">＋</div>
+        <h3>A quiet day so far</h3>
+        <p>No records are saved for {{ selectedDateLabel.toLowerCase() }}.</p>
+        <button mat-stroked-button type="button" (click)="openNewRecord()">Add the first record</button>
+      </div>
+    }
+  </section>
+  }
+</main>

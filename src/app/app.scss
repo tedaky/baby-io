@@ -1,0 +1,72 @@
+:host {
+	--ink: #27333a;
+	--muted: #6c7a80;
+	--line: #dce5e1;
+	--paper: #fbfcf9;
+	--mint: #dcefe6;
+	--coral: #e47b62;
+	display: block;
+	min-height: 100%;
+}
+
+.app-shell {
+	box-sizing: border-box;
+	max-width: 760px;
+	min-height: 100dvh;
+	margin: 0 auto;
+	padding: 2rem 1.25rem 4rem;
+	color: var(--ink);
+}
+
+.app-header,
+.section-heading,
+.date-panel,
+.record-card,
+.form-actions {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+}
+
+.app-header { margin-bottom: 2rem; }
+.eyebrow { margin: 0 0 0.35rem; color: var(--coral); font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12rem; }
+h1, h2, h3, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: clamp(2rem, 8vw, 3.4rem); font-weight: 500; letter-spacing: 0; line-height: 1; }
+h2 { margin-bottom: 0.3rem; font-size: 1.4rem; font-weight: 650; letter-spacing: 0; }
+h3 { margin-bottom: 0.5rem; font-size: 1.15rem; }
+.header-mark { color: var(--coral); font-size: 2.4rem; transform: rotate(12deg); }
+
+.date-panel { gap: 1rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--mint); }
+.date-subtitle { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.date-field { width: 9.5rem; margin-bottom: -1.35rem; }
+.add-button { width: 100%; min-height: 3.25rem; margin: 1rem 0 2.5rem; border-radius: 6px; }
+.entry-panel { margin: 1rem 0 2.5rem; padding: 1.25rem; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+.entry-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-top: 1.25rem; }
+.check-row { display: flex; gap: 1.25rem; margin: 0.25rem 0 1.25rem; }
+.form-actions { justify-content: flex-end; gap: 0.5rem; }
+.timeline { padding-top: 0.25rem; }
+.timeline > .section-heading { margin-bottom: 1rem; }
+.record-list { display: grid; gap: 0.75rem; }
+.record-card { gap: 1rem; min-height: 5rem; padding: 0.9rem 1rem; border: 1px solid var(--line); border-radius: 8px; box-shadow: none; }
+.record-time { align-self: flex-start; min-width: 3.3rem; padding-top: 0.25rem; color: var(--muted); font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.record-details { flex: 1; min-width: 0; }
+.amounts { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.95rem; }
+.amounts strong { font-size: 1.1rem; }
+.quiet { color: var(--muted); }
+.badges { display: flex; gap: 0.4rem; margin-top: 0.45rem; }
+.badge { padding: 0.18rem 0.5rem; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
+.badge.pee { color: #287466; background: #e1f3ed; }
+.badge.poop { color: #855b3d; background: #f2e8df; }
+.record-actions { display: flex; }
+.empty-state { padding: 3.5rem 1rem; text-align: center; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.empty-icon { display: grid; width: 3rem; height: 3rem; margin: 0 auto 1rem; place-items: center; border-radius: 50%; color: var(--coral); background: #fff0eb; font-size: 1.75rem; }
+.empty-state p { max-width: 20rem; margin: 0 auto 1.25rem; color: var(--muted); }
+.empty-state .auth-error { max-width: 28rem; padding: 0.75rem 1rem; border: 1px solid #e8b3a7; border-radius: 6px; color: #9c3e2d; background: #fff3ef; }
+
+@media (max-width: 560px) {
+	.app-shell { padding: 1.25rem 1rem 3rem; }
+	.date-panel { align-items: flex-start; flex-direction: column; }
+	.date-field { width: 100%; margin-bottom: -1.35rem; }
+	.entry-grid { grid-template-columns: 1fr 1fr; }
+	.entry-grid mat-form-field:first-child { grid-column: 1 / -1; }
+}
