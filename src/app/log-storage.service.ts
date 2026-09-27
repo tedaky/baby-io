@@ -4,8 +4,8 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -18,23 +18,40 @@ import { FeedingRecord, Record, WeightRecord } from './record.model';
 export class LogStorageService {
   private readonly logs = collection(firestore, 'logs');
 
-  async getRecordsForDates(dates: string[]): Promise<Record[]> {
-    const snapshot = await getDocs(query(this.logs, where('date', 'in', dates)));
-    return snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as Record);
+  subscribeRecordsForDates(
+    dates: string[],
+    onChange: (records: Record[]) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    return onSnapshot(
+      query(this.logs, where('date', 'in', dates)),
+      (snapshot) => {
+        onChange(snapshot.docs.map((entry) => ({ id: entry.id, ...entry.data() }) as Record));
+      },
+      onError,
+    );
   }
 
-  async getLatestWeight(): Promise<WeightRecord | undefined> {
-    const snapshot = await getDocs(
+  subscribeLatestWeight(
+    onOrBefore: string,
+    onChange: (weight: WeightRecord | undefined) => void,
+    onError: (error: Error) => void,
+  ): () => void {
+    return onSnapshot(
       query(
         this.logs,
         where('type', '==', 'weight'),
+        where('date', '<=', onOrBefore),
         orderBy('date', 'desc'),
         orderBy('time', 'desc'),
         limit(1),
       ),
+      (snapshot) => {
+        const entry = snapshot.docs[0];
+        onChange(entry ? ({ id: entry.id, ...entry.data() } as WeightRecord) : undefined);
+      },
+      onError,
     );
-    const entry = snapshot.docs[0];
-    return entry ? ({ id: entry.id, ...entry.data() } as WeightRecord) : undefined;
   }
 
   async add(record: Omit<FeedingRecord, 'id'>): Promise<FeedingRecord>;

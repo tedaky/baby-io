@@ -106,6 +106,7 @@
               feedingGoalStatus === 'reached' || feedingGoalStatus === 'exceeded'
             "
             [class.feeding-goal-not-reached]="feedingGoalStatus === 'remaining'"
+            [class.feeding-goal-future]="isSelectedDateFuture"
             >{{ feedingGoalStatusLabel }}</span
           >
         } @else {

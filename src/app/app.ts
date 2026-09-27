@@ -55,19 +55,60 @@ export class App {
   protected readonly records = signal<Record[]>([]);
   protected draft: Draft = this.emptyDraft();
   protected weightDraft: WeightDraft = this.emptyWeightDraft();
-  private recordsLoadVersion = 0;
 
   constructor(
     protected readonly auth: AuthService,
     private readonly logStorage: LogStorageService,
     private readonly snackBar: MatSnackBar,
   ) {
-    effect(() => {
+    effect((onCleanup) => {
       const user = this.auth.user();
       const selectedDate = this.selectedDate();
-      const loadVersion = ++this.recordsLoadVersion;
-      if (user) void this.loadRecords(selectedDate, loadVersion);
-      else this.records.set([]);
+      if (!user) {
+        this.records.set([]);
+        return;
+      }
+
+      const previousDate = new Date(selectedDate);
+      previousDate.setDate(previousDate.getDate() - 1);
+      const dates = [this.dateKey(selectedDate), this.dateKey(previousDate)];
+      let rangeRecords: Record[] = [];
+      let latestWeight: WeightRecord | undefined;
+      const updateRecords = () => {
+        const records = [...rangeRecords];
+        const weight = latestWeight;
+        if (weight && !records.some((record) => record.id === weight.id)) records.push(weight);
+        this.records.set(records);
+      };
+      const showSyncError = () =>
+        this.snackBar.open(
+          'Unable to sync records. Check your connection and try again.',
+          'Dismiss',
+          {
+            duration: 5000,
+          },
+        );
+      const unsubscribeRange = this.logStorage.subscribeRecordsForDates(
+        dates,
+        (records) => {
+          rangeRecords = records;
+          updateRecords();
+        },
+        showSyncError,
+      );
+      const unsubscribeWeight = this.logStorage.subscribeLatestWeight(
+        this.dateKey(selectedDate),
+        (weight) => {
+          latestWeight = weight;
+          updateRecords();
+        },
+        showSyncError,
+      );
+
+      onCleanup(() => {
+        unsubscribeRange();
+        unsubscribeWeight();
+      });
     });
   }
 
@@ -96,7 +137,7 @@ export class App {
       .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))[0];
   }
   protected get selectedDayWeight(): WeightRecord | undefined {
-    return this.latestWeightForDate(this.selectedDateKey);
+    return this.latestWeightOnOrBefore(this.selectedDateKey);
   }
   protected get previousDayWeight(): WeightRecord | undefined {
     const previousDay = new Date(this.selectedDate());
@@ -130,6 +171,9 @@ export class App {
   protected get feedingGoal(): number | undefined {
     const weight = this.selectedDayWeight;
     return weight ? Math.round((weight.weight / 1000) * 150) : undefined;
+  }
+  protected get isSelectedDateFuture(): boolean {
+    return this.selectedDateKey > this.dateKey(new Date());
   }
   protected get remainingFeedingAmount(): number | undefined {
     return this.feedingGoal === undefined
@@ -263,21 +307,6 @@ export class App {
       entryHeading?.focus({ preventScroll: true });
     });
   }
-  private async loadRecords(selectedDate: Date, loadVersion: number): Promise<void> {
-    const previousDate = new Date(selectedDate);
-    previousDate.setDate(previousDate.getDate() - 1);
-    const dates = [this.dateKey(selectedDate), this.dateKey(previousDate)];
-    const [rangeRecords, latestWeight] = await Promise.all([
-      this.logStorage.getRecordsForDates(dates),
-      this.logStorage.getLatestWeight(),
-    ]);
-    if (loadVersion !== this.recordsLoadVersion) return;
-    const records = [...rangeRecords];
-    if (latestWeight && !records.some((record) => record.id === latestWeight.id)) {
-      records.push(latestWeight);
-    }
-    this.records.set(records);
-  }
   private async restoreRecord(record: Record): Promise<void> {
     await this.logStorage.update(record);
     this.records.update((records) =>
@@ -321,6 +350,11 @@ export class App {
     return this.records()
       .filter((record): record is WeightRecord => record.type === 'weight' && record.date === date)
       .sort((a, b) => b.time.localeCompare(a.time))[0];
+  }
+  private latestWeightOnOrBefore(date: string): WeightRecord | undefined {
+    return this.records()
+      .filter((record): record is WeightRecord => record.type === 'weight' && record.date <= date)
+      .sort((a, b) => `${b.date}T${b.time}`.localeCompare(`${a.date}T${a.time}`))[0];
   }
   private startOfDay(date: Date): Date {
     return new Date(date.getFullYear(), date.getMonth(), date.getDate());
