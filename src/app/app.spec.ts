@@ -175,4 +175,43 @@ describe('App', () => {
       fixture.nativeElement.querySelector('.summary-item:nth-child(2) strong')?.textContent,
     ).toContain('120 mL');
   });
+
+  it('should not duplicate records when the live snapshot arrives before add resolves', async () => {
+    let emitRecords: (records: any[]) => void = () => undefined;
+    let liveRecords: any[] = [];
+    TestBed.overrideProvider(LogStorageService, {
+      useValue: {
+        subscribeLatestWeight: (_date: string, onChange: (weight: any) => void) => {
+          onChange(undefined);
+          return () => undefined;
+        },
+        subscribeRecordsForDates: (_dates: string[], onChange: (records: any[]) => void) => {
+          emitRecords = onChange;
+          onChange([]);
+          return () => undefined;
+        },
+        add: async (record: any) => {
+          const created = { id: `new-${record.type}`, ...record };
+          liveRecords = [...liveRecords, created];
+          emitRecords(liveRecords);
+          return created;
+        },
+      },
+    });
+
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as any;
+    app.draft = { time: '12:00', milk: 120, supplement: null, pee: false, poop: false };
+    await app.saveRecord();
+
+    app.activeTab.set('weight');
+    app.weightDraft = { time: '12:30', weight: 3500 };
+    await app.saveRecord();
+
+    expect(app.records().filter((record: any) => record.id === 'new-feeding')).toHaveLength(1);
+    expect(app.records().filter((record: any) => record.id === 'new-weight')).toHaveLength(1);
+    expect(app.records()).toHaveLength(2);
+    fixture.destroy();
+  });
 });

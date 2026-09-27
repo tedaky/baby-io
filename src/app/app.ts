@@ -245,7 +245,7 @@ export class App {
     const currentId = this.editingId();
     if (currentId === null) {
       const record = await this.logStorage.add(this.draftRecord());
-      this.records.update((records) => [...records, record]);
+      this.upsertRecord(record);
     } else {
       const record = { id: currentId, ...this.draftRecord() };
       await this.logStorage.update(record);
@@ -317,7 +317,7 @@ export class App {
     const currentId = this.editingId();
     if (currentId === null) {
       const record = await this.logStorage.add(this.weightRecord());
-      this.records.update((records) => [...records, record]);
+      this.upsertRecord(record);
     } else {
       const record = { id: currentId, ...this.weightRecord() };
       await this.logStorage.update(record);
@@ -326,6 +326,12 @@ export class App {
       );
     }
     this.cancelForm();
+  }
+  private upsertRecord(record: Record): void {
+    this.records.update((records) => [
+      ...records.filter((existing) => existing.id !== record.id),
+      record,
+    ]);
   }
   private draftRecord(): Omit<FeedingRecord, 'id'> {
     return {
