@@ -54,7 +54,10 @@
             aria-label="Choose a date"
           />
           <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-          <mat-datepicker #picker></mat-datepicker>
+          <mat-datepicker
+            #picker
+            [calendarHeaderComponent]="calendarHeaderComponent"
+          ></mat-datepicker>
         </mat-form-field>
         <button mat-icon-button type="button" (click)="selectRelativeDate(1)" aria-label="Next day">
           <mat-icon>chevron_right</mat-icon>

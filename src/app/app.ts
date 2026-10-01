@@ -1,10 +1,11 @@
-import { Component, effect, signal } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DateAdapter } from '@angular/material/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatCalendar, MatDatepicker, MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -30,6 +31,238 @@ type Tab = 'feeding' | 'weight';
 type EditingType = Tab | null;
 
 @Component({
+  selector: 'app-calendar-header',
+  standalone: true,
+  imports: [MatButtonModule, MatIconModule],
+  template: `
+    <div class="mat-calendar-header">
+      <div class="mat-calendar-controls">
+        <button
+          mat-button
+          type="button"
+          class="mat-calendar-period-button"
+          (click)="currentPeriodClicked()"
+          [attr.aria-label]="periodButtonLabel"
+        >
+          <span aria-hidden="true">{{ periodButtonText }}</span>
+          <svg
+            class="mat-calendar-arrow"
+            [class.mat-calendar-invert]="calendar.currentView !== 'month'"
+            viewBox="0 0 10 5"
+            focusable="false"
+            aria-hidden="true"
+          >
+            <polygon points="0,0 5,5 10,0" />
+          </svg>
+        </button>
+
+        <div class="mat-calendar-actions">
+          <button
+            mat-icon-button
+            type="button"
+            class="mat-calendar-today-button"
+            aria-label="Jump to today"
+            (click)="goToToday()"
+          >
+            <mat-icon>today</mat-icon>
+          </button>
+
+          <button
+            mat-icon-button
+            type="button"
+            class="mat-calendar-previous-button"
+            [disabled]="!previousEnabled()"
+            (click)="previousClicked()"
+            [attr.aria-label]="previousButtonLabel"
+          >
+            <mat-icon>chevron_left</mat-icon>
+          </button>
+
+          <button
+            mat-icon-button
+            type="button"
+            class="mat-calendar-next-button"
+            [disabled]="!nextEnabled()"
+            (click)="nextClicked()"
+            [attr.aria-label]="nextButtonLabel"
+          >
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  `,
+  styles: [
+    `
+      .mat-calendar-header {
+        display: block;
+      }
+
+      .mat-calendar-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        width: 100%;
+        margin: 0;
+      }
+
+      .mat-calendar-period-button {
+        flex: 0 1 auto;
+        min-width: 0;
+        justify-content: center;
+        margin-left: 0;
+        margin-right: 0;
+        padding-left: 8px;
+        padding-right: 8px;
+        white-space: nowrap;
+      }
+
+      .mat-calendar-period-button span {
+        display: inline-block;
+        white-space: nowrap;
+      }
+
+      .mat-calendar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        margin-left: auto;
+        flex-shrink: 0;
+      }
+
+      .mat-calendar-today-button {
+        flex-shrink: 0;
+        margin-left: 0;
+        margin-right: 0;
+      }
+
+      .mat-calendar-arrow {
+        width: 0.625rem;
+        height: 0.625rem;
+        margin-left: 0.25rem;
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+      }
+
+      .mat-calendar-invert {
+        transform: rotate(180deg);
+      }
+    `,
+  ],
+})
+export class DatePickerHeaderComponent {
+  protected readonly calendar = inject(MatCalendar<Date>);
+  private readonly datepicker = inject(MatDatepicker<Date>);
+  private readonly adapter = inject(DateAdapter<Date>);
+  protected periodButtonText = '';
+  protected periodButtonLabel = '';
+  protected previousButtonLabel = '';
+  protected nextButtonLabel = '';
+
+  constructor() {
+    this.updateLabels();
+    this.calendar.stateChanges.subscribe(() => this.updateLabels());
+  }
+
+  protected goToToday(): void {
+    const today = this.adapter.today();
+    this.calendar.activeDate = today;
+    this.calendar.currentView = 'month';
+    this.datepicker.select(today);
+    this.datepicker.close();
+  }
+
+  protected currentPeriodClicked(): void {
+    this.calendar.currentView = this.calendar.currentView === 'month' ? 'multi-year' : 'month';
+    this.updateLabels();
+  }
+
+  protected previousClicked(): void {
+    if (!this.previousEnabled()) return;
+    if (this.calendar.currentView === 'month') {
+      this.calendar.activeDate = this.adapter.addCalendarMonths(this.calendar.activeDate, -1);
+      return;
+    }
+    if (this.calendar.currentView === 'year') {
+      this.calendar.activeDate = this.adapter.addCalendarYears(this.calendar.activeDate, -1);
+      return;
+    }
+    this.calendar.activeDate = this.adapter.addCalendarYears(this.calendar.activeDate, -12);
+  }
+
+  protected nextClicked(): void {
+    if (!this.nextEnabled()) return;
+    if (this.calendar.currentView === 'month') {
+      this.calendar.activeDate = this.adapter.addCalendarMonths(this.calendar.activeDate, 1);
+      return;
+    }
+    if (this.calendar.currentView === 'year') {
+      this.calendar.activeDate = this.adapter.addCalendarYears(this.calendar.activeDate, 1);
+      return;
+    }
+    this.calendar.activeDate = this.adapter.addCalendarYears(this.calendar.activeDate, 12);
+  }
+
+  protected previousEnabled(): boolean {
+    if (!this.calendar.minDate) return true;
+    return !this.isSameView(this.calendar.activeDate, this.calendar.minDate);
+  }
+
+  protected nextEnabled(): boolean {
+    return (
+      !this.calendar.maxDate || !this.isSameView(this.calendar.activeDate, this.calendar.maxDate)
+    );
+  }
+
+  private updateLabels(): void {
+    const activeDate = this.calendar.activeDate;
+
+    if (this.calendar.currentView === 'month') {
+      this.periodButtonText = this.adapter
+        .format(activeDate, { year: 'numeric', month: 'long' })
+        .toUpperCase();
+      this.periodButtonLabel = 'Switch to multi-year view';
+      this.previousButtonLabel = 'Previous month';
+      this.nextButtonLabel = 'Next month';
+      return;
+    }
+
+    if (this.calendar.currentView === 'year') {
+      this.periodButtonText = this.adapter.getYear(activeDate).toString();
+      this.periodButtonLabel = 'Switch to month view';
+      this.previousButtonLabel = 'Previous year';
+      this.nextButtonLabel = 'Next year';
+      return;
+    }
+
+    const activeYear = this.adapter.getYear(activeDate);
+    const minYear = activeYear - (activeYear % 12);
+    const maxYear = minYear + 11;
+    this.periodButtonText = `${minYear}–${maxYear}`;
+    this.periodButtonLabel = 'Switch to month view';
+    this.previousButtonLabel = 'Previous 12 years';
+    this.nextButtonLabel = 'Next 12 years';
+  }
+
+  private isSameView(date1: Date, date2: Date): boolean {
+    if (this.calendar.currentView === 'month') {
+      return (
+        this.adapter.getYear(date1) === this.adapter.getYear(date2) &&
+        this.adapter.getMonth(date1) === this.adapter.getMonth(date2)
+      );
+    }
+
+    if (this.calendar.currentView === 'year') {
+      return this.adapter.getYear(date1) === this.adapter.getYear(date2);
+    }
+
+    const year1 = this.adapter.getYear(date1);
+    const year2 = this.adapter.getYear(date2);
+    return Math.floor(year1 / 12) === Math.floor(year2 / 12);
+  }
+}
+
+@Component({
   imports: [
     DatePipe,
     FormsModule,
@@ -47,6 +280,7 @@ type EditingType = Tab | null;
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly calendarHeaderComponent = DatePickerHeaderComponent;
   protected readonly selectedDate = signal(this.startOfDay(new Date()));
   protected readonly activeTab = signal<Tab>('feeding');
   protected readonly isFormOpen = signal(false);
