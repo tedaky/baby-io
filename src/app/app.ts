@@ -168,6 +168,21 @@ export class App {
   protected get dailyVolumeTotal(): number {
     return this.dailyMilkTotal + this.dailySupplementTotal;
   }
+  protected get dailyFeedingRecords(): FeedingRecord[] {
+    return this.visibleFeedingRecords.filter((record) => record.milk > 0 || record.supplement > 0);
+  }
+  protected get dailyFeedingCount(): number {
+    return this.dailyFeedingRecords.length;
+  }
+  protected get dailyFeedingAverage(): number {
+    return this.dailyFeedingCount === 0 ? 0 : Math.round(this.dailyVolumeTotal / this.dailyFeedingCount);
+  }
+  protected get dailyPeeCount(): number {
+    return this.visibleFeedingRecords.filter((record) => record.pee).length;
+  }
+  protected get dailyPoopCount(): number {
+    return this.visibleFeedingRecords.filter((record) => record.poop).length;
+  }
   protected get feedingGoal(): number | undefined {
     const weight = this.selectedDayWeight;
     return weight ? Math.round((weight.weight / 1000) * 150) : undefined;

@@ -89,11 +89,17 @@
         }
       </div>
       <div class="summary-item">
-        <span class="summary-label">Today’s milk + supplement</span>
+        <span class="summary-label">Milk + supplement total</span>
         <strong>{{ dailyVolumeTotal }} mL</strong>
         <span class="summary-detail"
           >{{ dailyMilkTotal }} milk · {{ dailySupplementTotal }} supplement</span
         >
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Daily events</span>
+        <strong>{{ dailyFeedingCount }} feedings</strong>
+        <span class="summary-detail">{{ dailyFeedingAverage }} mL average per feeding</span>
+        <span class="summary-detail">{{ dailyPeeCount }} pee · {{ dailyPoopCount }} poop</span>
       </div>
       <div class="summary-item">
         <span class="summary-label">Daily feeding goal</span>

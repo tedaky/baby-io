@@ -71,10 +71,10 @@ describe('App', () => {
     fixture.detectChanges();
 
     const summaryItems = fixture.nativeElement.querySelectorAll('.summary-item');
-    expect(summaryItems[2].querySelector('strong')?.textContent).toContain('300 mL');
-    expect(summaryItems[2].textContent).toContain('150 mL remaining');
+    expect(summaryItems[3].querySelector('strong')?.textContent).toContain('300 mL');
+    expect(summaryItems[3].textContent).toContain('150 mL remaining');
     expect(
-      summaryItems[2]
+      summaryItems[3]
         .querySelector('.feeding-goal-status')
         ?.classList.contains('feeding-goal-not-reached'),
     ).toBe(true);
@@ -86,9 +86,9 @@ describe('App', () => {
     );
     fixture.detectChanges();
 
-    expect(summaryItems[2].textContent).toContain('Over goal by 50 mL');
+    expect(summaryItems[3].textContent).toContain('Over goal by 50 mL');
     expect(
-      summaryItems[2]
+      summaryItems[3]
         .querySelector('.feeding-goal-status')
         ?.classList.contains('feeding-goal-reached'),
     ).toBe(true);
@@ -109,7 +109,63 @@ describe('App', () => {
     const summaryItems = fixture.nativeElement.querySelectorAll('.summary-item');
     expect(summaryItems[0].textContent).toContain('2000 g');
     expect(summaryItems[0].textContent).toContain('Jan 1');
-    expect(summaryItems[2].textContent).toContain('300 mL');
+    expect(summaryItems[3].textContent).toContain('300 mL');
+  });
+
+  it('should summarize feedings and diaper events for the selected day', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as any;
+    app.selectedDate.set(new Date(2025, 0, 2));
+    fixture.detectChanges();
+    app.records.set([
+      {
+        id: 'feeding-one',
+        type: 'feeding',
+        date: '2025-01-02',
+        time: '08:00',
+        milk: 100,
+        supplement: 50,
+        pee: true,
+        poop: false,
+      },
+      {
+        id: 'feeding-two',
+        type: 'feeding',
+        date: '2025-01-02',
+        time: '12:00',
+        milk: 50,
+        supplement: 0,
+        pee: false,
+        poop: false,
+      },
+      {
+        id: 'care-event',
+        type: 'feeding',
+        date: '2025-01-02',
+        time: '14:00',
+        milk: 0,
+        supplement: 0,
+        pee: true,
+        poop: true,
+      },
+      {
+        id: 'other-day',
+        type: 'feeding',
+        date: '2025-01-01',
+        time: '14:00',
+        milk: 200,
+        supplement: 0,
+        pee: true,
+        poop: true,
+      },
+    ]);
+    fixture.detectChanges();
+
+    const dailyEvents = fixture.nativeElement.querySelectorAll('.summary-item')[2];
+    expect(dailyEvents.textContent).toContain('2 feedings');
+    expect(dailyEvents.textContent).toContain('100 mL average per feeding');
+    expect(dailyEvents.textContent).toContain('2 pee · 1 poop');
   });
 
   it('should show the feeding goal status in gray for a future date', async () => {
