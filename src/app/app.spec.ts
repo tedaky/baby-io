@@ -94,6 +94,43 @@ describe('App', () => {
     ).toBe(true);
   });
 
+  it("should show today's feeding goal overage in green and keep remaining text gray", async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as any;
+    const today = new Date();
+    app.selectedDate.set(today);
+    fixture.detectChanges();
+    const dateKey = app.selectedDateKey;
+    app.records.set([
+      { id: 'today-weight', type: 'weight', date: dateKey, time: '08:00', weight: 2000 },
+      {
+        id: 'today-feeding',
+        type: 'feeding',
+        date: dateKey,
+        time: '12:00',
+        milk: 250,
+        supplement: 0,
+        pee: false,
+        poop: false,
+      },
+    ]);
+    fixture.detectChanges();
+
+    const status = fixture.nativeElement.querySelector('.feeding-goal-status');
+    expect(status?.textContent).toContain('50 mL remaining');
+    expect(status?.classList.contains('feeding-goal-not-reached')).toBe(false);
+    expect(status?.classList.contains('feeding-goal-reached')).toBe(false);
+
+    app.records.update((records: any[]) =>
+      records.map((record) => (record.id === 'today-feeding' ? { ...record, milk: 350 } : record)),
+    );
+    fixture.detectChanges();
+
+    expect(status?.textContent).toContain('Over goal by 50 mL');
+    expect(status?.classList.contains('feeding-goal-reached')).toBe(true);
+  });
+
   it('should use the latest weight on or before the selected day', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

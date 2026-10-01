@@ -175,7 +175,9 @@ export class App {
     return this.dailyFeedingRecords.length;
   }
   protected get dailyFeedingAverage(): number {
-    return this.dailyFeedingCount === 0 ? 0 : Math.round(this.dailyVolumeTotal / this.dailyFeedingCount);
+    return this.dailyFeedingCount === 0
+      ? 0
+      : Math.round(this.dailyVolumeTotal / this.dailyFeedingCount);
   }
   protected get dailyPeeCount(): number {
     return this.visibleFeedingRecords.filter((record) => record.pee).length;
@@ -196,8 +198,14 @@ export class App {
       : Math.max(this.feedingGoal - this.dailyVolumeTotal, 0);
   }
   protected get feedingGoalStatus(): 'today' | 'remaining' | 'reached' | 'exceeded' {
-    if (this.selectedDateKey === this.dateKey(new Date())) return 'today';
     const goal = this.feedingGoal;
+    if (
+      this.selectedDateKey === this.dateKey(new Date()) &&
+      goal !== undefined &&
+      this.dailyVolumeTotal < goal
+    ) {
+      return 'today';
+    }
     if (goal === undefined || this.dailyVolumeTotal < goal) return 'remaining';
     return this.dailyVolumeTotal === goal ? 'reached' : 'exceeded';
   }
