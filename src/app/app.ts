@@ -10,7 +10,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { FeedingRecord, Record, WeightRecord } from './record.model';
+import { FeedingRecord, RatingRecord, Record, WeightRecord } from './record.model';
 import { AuthService } from './auth.service';
 import { LogStorageService } from './log-storage.service';
 
@@ -29,6 +29,7 @@ interface WeightDraft {
 
 type Tab = 'feeding' | 'weight';
 type EditingType = Tab | null;
+type RatingPreview = { period: RatingRecord['period']; points: number } | null;
 
 @Component({
   selector: 'app-calendar-header',
@@ -281,12 +282,14 @@ export class DatePickerHeaderComponent {
 })
 export class App {
   protected readonly calendarHeaderComponent = DatePickerHeaderComponent;
+  protected readonly ratingStars = [1, 2, 3, 4, 5];
   protected readonly selectedDate = signal(this.startOfDay(new Date()));
   protected readonly activeTab = signal<Tab>('feeding');
   protected readonly isFormOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
   protected readonly editingType = signal<EditingType>(null);
   protected readonly records = signal<Record[]>([]);
+  protected readonly ratingPreview = signal<RatingPreview>(null);
   protected draft: Draft = this.emptyDraft();
   protected weightDraft: WeightDraft = this.emptyWeightDraft();
 
@@ -353,7 +356,8 @@ export class App {
     return this.records()
       .filter(
         (record): record is FeedingRecord =>
-          record.type !== 'weight' && record.date === this.selectedDateKey,
+          (record.type === undefined || record.type === 'feeding') &&
+          record.date === this.selectedDateKey,
       )
       .sort((a, b) => b.time.localeCompare(a.time));
   }
@@ -364,6 +368,50 @@ export class App {
           record.type === 'weight' && record.date === this.selectedDateKey,
       )
       .sort((a, b) => b.time.localeCompare(a.time));
+  }
+  protected ratingFor(period: RatingRecord['period']): RatingRecord | undefined {
+    return this.records().find(
+      (record): record is RatingRecord =>
+        record.type === 'rating' &&
+        record.date === this.selectedDateKey &&
+        record.period === period,
+    );
+  }
+  protected ratingDisplayPoints(period: RatingRecord['period']): number | undefined {
+    const preview = this.ratingPreview();
+    return preview?.period === period ? preview.points : this.ratingFor(period)?.points;
+  }
+  protected previewRating(period: RatingRecord['period'], points: number): void {
+    this.ratingPreview.set({ period, points });
+  }
+  protected clearRatingPreview(period: RatingRecord['period']): void {
+    if (this.ratingPreview()?.period === period) this.ratingPreview.set(null);
+  }
+  protected ratingStarIcon(period: RatingRecord['period'], star: number): string {
+    const points = this.ratingDisplayPoints(period) ?? 0;
+    if (points >= star * 2) return 'star';
+    return points === star * 2 - 1 ? 'star_half' : 'star_border';
+  }
+  protected async setRating(period: RatingRecord['period'], points: number): Promise<void> {
+    if (!Number.isInteger(points) || points < 1 || points > 10) return;
+    const existing = this.ratingFor(period);
+    if (existing) {
+      const updated = { ...existing, points };
+      await this.logStorage.update(updated);
+      this.records.update((records) =>
+        records.map((record) => (record.id === updated.id ? updated : record)),
+      );
+      return;
+    }
+
+    const rating = await this.logStorage.add({
+      type: 'rating',
+      date: this.selectedDateKey,
+      time: period === 'night' ? '00:00' : '08:00',
+      period,
+      points,
+    });
+    this.upsertRecord(rating);
   }
   protected get latestWeight(): WeightRecord | undefined {
     return this.records()

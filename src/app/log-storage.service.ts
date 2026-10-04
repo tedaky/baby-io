@@ -12,7 +12,7 @@ import {
   where,
 } from 'firebase/firestore';
 import { firestore } from './firebase';
-import { FeedingRecord, Record, WeightRecord } from './record.model';
+import { FeedingRecord, RatingRecord, Record, WeightRecord } from './record.model';
 
 @Injectable({ providedIn: 'root' })
 export class LogStorageService {
@@ -56,7 +56,10 @@ export class LogStorageService {
 
   async add(record: Omit<FeedingRecord, 'id'>): Promise<FeedingRecord>;
   async add(record: Omit<WeightRecord, 'id'>): Promise<WeightRecord>;
-  async add(record: Omit<FeedingRecord, 'id'> | Omit<WeightRecord, 'id'>): Promise<Record> {
+  async add(record: Omit<RatingRecord, 'id'>): Promise<RatingRecord>;
+  async add(
+    record: Omit<FeedingRecord, 'id'> | Omit<WeightRecord, 'id'> | Omit<RatingRecord, 'id'>,
+  ): Promise<Record> {
     const entry = await addDoc(this.logs, record);
     return { id: entry.id, ...record } as Record;
   }

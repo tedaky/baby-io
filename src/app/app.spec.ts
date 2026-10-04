@@ -205,6 +205,47 @@ describe('App', () => {
     expect(dailyEvents.textContent).toContain('2 pee · 1 poop');
   });
 
+  it('should save a selected half-star rating as an integer point value', async () => {
+    TestBed.overrideProvider(LogStorageService, {
+      useValue: {
+        subscribeLatestWeight: (_date: string, onChange: (weight: any) => void) => {
+          onChange(undefined);
+          return () => undefined;
+        },
+        subscribeRecordsForDates: (_dates: string[], onChange: (records: any[]) => void) => {
+          onChange([]);
+          return () => undefined;
+        },
+        add: async (record: any) => ({ id: 'night-rating', ...record }),
+      },
+    });
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as any;
+    app.selectedDate.set(new Date(2025, 0, 2));
+    fixture.detectChanges();
+
+    const halfStarButton = fixture.nativeElement.querySelector(
+      '[aria-label="Set night rating to 7 points"]',
+    ) as HTMLButtonElement;
+    halfStarButton.dispatchEvent(new MouseEvent('mouseenter'));
+    fixture.detectChanges();
+
+    expect(
+      fixture.nativeElement.querySelector('.rating-summary-item .rating-star:nth-child(4) mat-icon')
+        ?.textContent,
+    ).toContain('star_half');
+    expect(fixture.nativeElement.querySelector('.rating-preview')).toBeNull();
+
+    halfStarButton.click();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(app.ratingFor('night').points).toBe(7);
+    expect(Number.isInteger(app.ratingFor('night').points)).toBe(true);
+    expect(fixture.nativeElement.querySelectorAll('.rating-star')).toHaveLength(10);
+  });
+
   it('should show the feeding goal status in gray for a future date', async () => {
     const fixture = TestBed.createComponent(App);
     await fixture.whenStable();

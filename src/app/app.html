@@ -122,6 +122,70 @@
           <strong class="summary-empty">Add a weight</strong>
         }
       </div>
+      <div class="summary-item rating-summary-item">
+        <span class="summary-label">Night · 12am–8am</span>
+        <div class="rating-stars" role="group" aria-label="Night rating">
+          @for (star of ratingStars; track star) {
+            <span class="rating-star">
+              <mat-icon aria-hidden="true">{{ ratingStarIcon('night', star) }}</mat-icon>
+              <button
+                class="rating-half rating-half-left"
+                type="button"
+                [attr.aria-label]="'Set night rating to ' + (star * 2 - 1) + ' points'"
+                [attr.aria-pressed]="ratingFor('night')?.points === star * 2 - 1"
+                (mouseenter)="previewRating('night', star * 2 - 1)"
+                (mouseleave)="clearRatingPreview('night')"
+                (focus)="previewRating('night', star * 2 - 1)"
+                (blur)="clearRatingPreview('night')"
+                (click)="setRating('night', star * 2 - 1)"
+              ></button>
+              <button
+                class="rating-half rating-half-right"
+                type="button"
+                [attr.aria-label]="'Set night rating to ' + star * 2 + ' points'"
+                [attr.aria-pressed]="ratingFor('night')?.points === star * 2"
+                (mouseenter)="previewRating('night', star * 2)"
+                (mouseleave)="clearRatingPreview('night')"
+                (focus)="previewRating('night', star * 2)"
+                (blur)="clearRatingPreview('night')"
+                (click)="setRating('night', star * 2)"
+              ></button>
+            </span>
+          }
+        </div>
+      </div>
+      <div class="summary-item rating-summary-item">
+        <span class="summary-label">Day · 8am–11:59pm</span>
+        <div class="rating-stars" role="group" aria-label="Day rating">
+          @for (star of ratingStars; track star) {
+            <span class="rating-star">
+              <mat-icon aria-hidden="true">{{ ratingStarIcon('day', star) }}</mat-icon>
+              <button
+                class="rating-half rating-half-left"
+                type="button"
+                [attr.aria-label]="'Set day rating to ' + (star * 2 - 1) + ' points'"
+                [attr.aria-pressed]="ratingFor('day')?.points === star * 2 - 1"
+                (mouseenter)="previewRating('day', star * 2 - 1)"
+                (mouseleave)="clearRatingPreview('day')"
+                (focus)="previewRating('day', star * 2 - 1)"
+                (blur)="clearRatingPreview('day')"
+                (click)="setRating('day', star * 2 - 1)"
+              ></button>
+              <button
+                class="rating-half rating-half-right"
+                type="button"
+                [attr.aria-label]="'Set day rating to ' + star * 2 + ' points'"
+                [attr.aria-pressed]="ratingFor('day')?.points === star * 2"
+                (mouseenter)="previewRating('day', star * 2)"
+                (mouseleave)="clearRatingPreview('day')"
+                (focus)="previewRating('day', star * 2)"
+                (blur)="clearRatingPreview('day')"
+                (click)="setRating('day', star * 2)"
+              ></button>
+            </span>
+          }
+        </div>
+      </div>
     </section>
 
     <nav class="tabs" aria-label="Log sections" role="tablist">

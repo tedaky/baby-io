@@ -17,4 +17,10 @@ export interface WeightRecord extends RecordBase {
   weight: number;
 }
 
-export type Record = FeedingRecord | WeightRecord;
+export interface RatingRecord extends RecordBase {
+  type: 'rating';
+  period: 'night' | 'day';
+  points: number;
+}
+
+export type Record = FeedingRecord | WeightRecord | RatingRecord;

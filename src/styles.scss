@@ -129,6 +129,9 @@ h3 {
   overflow: hidden;
   box-shadow: var(--mat-card-elevated-container-elevation, var(--mat-sys-level1));
 }
+.summary-panel:has(> .summary-item:nth-child(9)) {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
 .summary-item {
   display: grid;
   gap: 0.2rem;
@@ -150,6 +153,52 @@ h3 {
 .summary-detail {
   color: var(--muted);
   font-size: 0.78rem;
+}
+.rating-stars {
+  display: flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+.rating-star {
+  position: relative;
+  display: grid;
+  width: 2.25rem;
+  height: 2.75rem;
+  place-items: center;
+  color: #b06b24;
+}
+.rating-star mat-icon {
+  pointer-events: none;
+  transition:
+    color 120ms ease,
+    transform 120ms ease,
+    filter 120ms ease;
+}
+.rating-star:has(.rating-half:hover, .rating-half:focus-visible) mat-icon {
+  color: var(--ink);
+  transform: scale(1.12);
+}
+.rating-star:has(.rating-half:focus-visible) mat-icon {
+  filter: drop-shadow(0 0 2px var(--coral));
+}
+.rating-half {
+  position: absolute;
+  top: 0;
+  width: 50%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.rating-half-left {
+  left: 0;
+}
+.rating-half-right {
+  right: 0;
+}
+.rating-half:focus-visible {
+  outline: none;
 }
 .feeding-goal-status {
   font-weight: 700;
