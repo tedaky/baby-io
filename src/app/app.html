@@ -220,7 +220,13 @@
               {{ editingId() ? 'Edit record' : 'Add ' + activeTab() + ' record' }}
             </h2>
           </div>
-          <button mat-icon-button type="button" (click)="cancelForm()" aria-label="Close form">
+          <button
+            mat-icon-button
+            type="button"
+            (click)="cancelForm()"
+            [disabled]="isSaving()"
+            aria-label="Close form"
+          >
             <mat-icon>close</mat-icon>
           </button>
         </div>
@@ -268,9 +274,24 @@
           </div>
         }
         <div class="form-actions">
-          <button mat-button type="button" (click)="cancelForm()">Cancel</button>
-          <button mat-flat-button color="primary" type="button" (click)="saveRecord()">
-            {{ editingId() ? 'Save changes' : 'Add ' + activeTab() + ' record' }}
+          <button mat-button type="button" (click)="cancelForm()" [disabled]="isSaving()">
+            Cancel
+          </button>
+          <button
+            mat-flat-button
+            color="primary"
+            type="button"
+            (click)="saveRecord()"
+            [disabled]="isSaving()"
+          >
+            @if (isSaving()) {
+              <span class="saving-indicator">
+                <mat-spinner diameter="18" aria-label="Saving record"></mat-spinner>
+                <span>Saving...</span>
+              </span>
+            } @else {
+              {{ editingId() ? 'Save changes' : 'Add ' + activeTab() + ' record' }}
+            }
           </button>
         </div>
       </section>

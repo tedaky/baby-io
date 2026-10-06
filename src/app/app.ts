@@ -9,6 +9,7 @@ import { MatCalendar, MatDatepicker, MatDatepickerModule } from '@angular/materi
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FeedingRecord, RatingRecord, Record, WeightRecord } from './record.model';
 import { AuthService } from './auth.service';
@@ -274,6 +275,7 @@ export class DatePickerHeaderComponent {
     MatFormFieldModule,
     MatIconModule,
     MatInputModule,
+    MatProgressSpinnerModule,
     MatSnackBarModule,
   ],
   selector: 'app-root',
@@ -286,6 +288,7 @@ export class App {
   protected readonly selectedDate = signal(this.startOfDay(new Date()));
   protected readonly activeTab = signal<Tab>('feeding');
   protected readonly isFormOpen = signal(false);
+  protected readonly isSaving = signal(false);
   protected readonly editingId = signal<string | null>(null);
   protected readonly editingType = signal<EditingType>(null);
   protected readonly records = signal<Record[]>([]);
@@ -541,24 +544,38 @@ export class App {
     this.scrollToEntryForm();
   }
   protected async saveRecord(): Promise<void> {
+    if (this.isSaving()) return;
     if (this.activeTab() === 'weight') {
       if (!this.weightDraft.weight || this.weightDraft.weight <= 0) return;
-      await this.saveWeight();
+    } else if (!this.draft.milk && !this.draft.supplement && !this.draft.pee && !this.draft.poop) {
       return;
     }
-    if (!this.draft.milk && !this.draft.supplement && !this.draft.pee && !this.draft.poop) return;
-    const currentId = this.editingId();
-    if (currentId === null) {
-      const record = await this.logStorage.add(this.draftRecord());
-      this.upsertRecord(record);
-    } else {
-      const record = { id: currentId, ...this.draftRecord() };
-      await this.logStorage.update(record);
-      this.records.update((records) =>
-        records.map((existing) => (existing.id === currentId ? record : existing)),
-      );
+
+    this.isSaving.set(true);
+    try {
+      if (this.activeTab() === 'weight') {
+        await this.saveWeight();
+        return;
+      }
+      const currentId = this.editingId();
+      if (currentId === null) {
+        const record = await this.logStorage.add(this.draftRecord());
+        this.upsertRecord(record);
+      } else {
+        const record = { id: currentId, ...this.draftRecord() };
+        await this.logStorage.update(record);
+        this.records.update((records) =>
+          records.map((existing) => (existing.id === currentId ? record : existing)),
+        );
+      }
+      this.cancelForm();
+    } catch {
+      this.snackBar.open('Unable to save record. Check your connection and try again.', 'Dismiss', {
+        duration: 5000,
+      });
+    } finally {
+      this.isSaving.set(false);
     }
-    this.cancelForm();
   }
   protected async deleteRecord(id: string): Promise<void> {
     if (!this.auth.user()) return;

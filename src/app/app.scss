@@ -8,3 +8,9 @@
   display: block;
   min-height: 100%;
 }
+
+.saving-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}

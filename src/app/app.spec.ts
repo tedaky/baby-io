@@ -348,4 +348,47 @@ describe('App', () => {
     expect(app.records()).toHaveLength(2);
     fixture.destroy();
   });
+
+  it('should show saving feedback and ignore repeated submits while adding a record', async () => {
+    let finishAdd: (record: any) => void = () => undefined;
+    let addCalls = 0;
+    TestBed.overrideProvider(LogStorageService, {
+      useValue: {
+        subscribeLatestWeight: (_date: string, onChange: (weight: any) => void) => {
+          onChange(undefined);
+          return () => undefined;
+        },
+        subscribeRecordsForDates: (_dates: string[], onChange: (records: any[]) => void) => {
+          onChange([]);
+          return () => undefined;
+        },
+        add: (record: any) => {
+          addCalls += 1;
+          return new Promise((resolve) => {
+            finishAdd = resolve;
+          }).then((created) => created ?? { id: 'new-feeding', ...record });
+        },
+      },
+    });
+
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const app = fixture.componentInstance as any;
+    app.openNewRecord();
+    app.draft = { time: '12:00', milk: 120, supplement: null, pee: false, poop: false };
+
+    const firstSave = app.saveRecord();
+    fixture.detectChanges();
+    const saveButton = fixture.nativeElement.querySelector('.form-actions button:last-child');
+    expect(saveButton.disabled).toBe(true);
+    expect(fixture.nativeElement.querySelector('mat-spinner')).not.toBeNull();
+
+    const secondSave = app.saveRecord();
+    expect(addCalls).toBe(1);
+
+    finishAdd({ id: 'new-feeding', type: 'feeding' });
+    await Promise.all([firstSave, secondSave]);
+    expect(app.isFormOpen()).toBe(false);
+    fixture.destroy();
+  });
 });
